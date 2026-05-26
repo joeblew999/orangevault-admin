@@ -42,7 +42,8 @@ impl AdminService for AdminServer {
         _ctx: RequestContext,
         request: OwnedListUsersRequestView,
     ) -> ServiceResult<ListUsersResponse> {
-        let limit = request.limit.unwrap_or(100).clamp(1, 1000) as i64;
+        // D1 rejects i64 — bind LIMIT as f64.
+        let limit = request.limit.unwrap_or(100).clamp(1, 1000) as f64;
 
         let stmt = self
             .db
