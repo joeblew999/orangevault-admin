@@ -28,8 +28,8 @@ depends     = ["deps:update"]
 run         = "wrangler dev"
 
 [tasks.deploy]
-description = "Build + deploy to Cloudflare Workers. Reads CLOUDFLARE_API_TOKEN from fnox."
-depends     = ["deps:update"]
+description = "Build web UI + deploy worker to Cloudflare. Reads CLOUDFLARE_API_TOKEN from fnox."
+depends     = ["deps:update", "web:build"]
 shell       = "nu -c"
 run = '''
 $env.CLOUDFLARE_API_TOKEN = (^fnox get CLOUDFLARE_API_TOKEN | str trim)
@@ -43,3 +43,28 @@ run = '''
 $env.CLOUDFLARE_API_TOKEN = (^fnox get CLOUDFLARE_API_TOKEN | str trim)
 ^wrangler tail
 '''
+
+# ── web (React + Vite + buf + ConnectRPC client) ───────────────────────────
+
+[tasks."web:install"]
+description = "pnpm install for ./web (idempotent)."
+dir         = "{{ config_root }}/web"
+run         = "npm install"
+
+[tasks."web:gen"]
+description = "Generate TS client from ../proto via buf into ./web/gen."
+dir         = "{{ config_root }}/web"
+depends     = ["web:install"]
+run         = "npx buf generate"
+
+[tasks."web:dev"]
+description = "Run the React admin UI locally on http://localhost:5174 (proxies RPCs to wrangler dev on :8787)."
+dir         = "{{ config_root }}/web"
+depends     = ["web:gen"]
+run         = "npm run dev"
+
+[tasks."web:build"]
+description = "Build static SPA into ./web/dist (consumed by wrangler [assets])."
+dir         = "{{ config_root }}/web"
+depends     = ["web:gen"]
+run         = "npm run build"

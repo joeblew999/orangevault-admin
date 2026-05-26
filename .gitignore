@@ -5,3 +5,7 @@ node_modules
 *.wasm
 .dev.vars
 .DS_Store
+/web/dist
+/web/gen
+/web/node_modules
+/web/.vite

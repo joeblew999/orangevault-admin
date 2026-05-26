@@ -12,6 +12,18 @@ binding = "DB"
 database_name = "orangevault"
 database_id = "844a51fd-229d-4e2b-8fb1-a4f37bd17c22"
 
+# React + Vite admin UI built to ./web/dist by `mise run web:build`.
+# SPA fallback so client-side routes work; run_worker_first routes the
+# ConnectRPC paths + /healthz to the Worker.
+[assets]
+directory = "./web/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = [
+  "/healthz",
+  "/orangevault_admin.v1.AdminService/*",
+]
+
 [vars]
 # Bearer auth gate. Set the real value via:
 #   wrangler secret put ADMIN_TOKEN
