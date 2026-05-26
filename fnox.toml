@@ -18,11 +18,11 @@ CLOUDFLARE_ACCOUNT_ID    = { provider = "keychain", value = "CLOUDFLARE_ACCOUNT_
 # Production domain for the admin worker.
 ORANGEVAULT_ADMIN_DOMAIN = { provider = "keychain", value = "ORANGEVAULT_ADMIN_DOMAIN" }
 
-# Macaroon root key — generated via `openssl rand -base64 32`. Pushed to
-# the deployed worker via `wrangler secret put MACAROON_ROOT_KEY`. The
-# admin CLI loads it from fnox to verify macaroons issued by the worker.
-ORANGEVAULT_ADMIN_MACAROON_ROOT_KEY = { provider = "keychain", value = "ORANGEVAULT_ADMIN_MACAROON_ROOT_KEY" }
-
-# First admin macaroon — minted once and stored here. CLI sends it as
-# Authorization: Bearer <macaroon-base64> on every request.
+# Bearer token used to authenticate every RPC against orangevault-admin.
+# Generate + push with:
+#   TOKEN=$(openssl rand -base64 32 | tr -d '=' | tr '+/' '-_')
+#   echo -n "$TOKEN" | fnox set --global -p keychain ORANGEVAULT_ADMIN_TOKEN
+#   echo -n "$TOKEN" | wrangler secret put ADMIN_TOKEN
+# Constant-time comparison on the worker side. Future: macaroons via
+# libmacaroon — already a Cargo dep, then this key becomes the root key.
 ORANGEVAULT_ADMIN_TOKEN  = { provider = "keychain", value = "ORANGEVAULT_ADMIN_TOKEN" }

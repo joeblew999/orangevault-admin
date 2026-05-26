@@ -13,8 +13,10 @@ database_name = "orangevault"
 database_id = "844a51fd-229d-4e2b-8fb1-a4f37bd17c22"
 
 [vars]
-# Set via `wrangler secret put MACAROON_ROOT_KEY` after generating with
-# `openssl rand -base64 32`. Until then macaroon verification falls back
-# to a deterministic dev key — fine for first deploy, MUST be rotated
-# before any real use.
+# Bearer auth gate. Set the real value via:
+#   wrangler secret put ADMIN_TOKEN
+# Anything reaching this worker (other than GET /healthz) needs:
+#   Authorization: Bearer <ADMIN_TOKEN>
+# Token comparison is constant-time. Future: macaroons via libmacaroon
+# (already a Cargo dep) — same root key field repurposed at that point.
 MACAROON_ROOT_KEY = ""
