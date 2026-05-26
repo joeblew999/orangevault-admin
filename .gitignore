@@ -9,3 +9,5 @@ node_modules
 /web/gen
 /web/node_modules
 /web/.vite
+/web/tsconfig.app.tsbuildinfo
+/web/tsconfig.node.tsbuildinfo

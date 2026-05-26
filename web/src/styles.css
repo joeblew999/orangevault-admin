@@ -747,3 +747,125 @@ button:disabled {
     transition: none !important;
   }
 }
+
+/* =========================================================================
+   Tables + danger zone — orangevault-admin additions (not in connyay's base).
+   ========================================================================= */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--body-sm);
+}
+.data-table th {
+  font-family: var(--font-mono);
+  font-size: var(--label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-align: left;
+  padding: var(--space-sm) var(--space-md) var(--space-xs);
+  border-bottom: 1px solid var(--border-visible);
+}
+.data-table td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.data-table tbody tr:hover {
+  background: var(--surface);
+}
+.data-table .mono {
+  font-family: var(--font-mono);
+  font-size: var(--body-sm);
+}
+
+/* Form card for the token gate. */
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 480px;
+  margin-top: var(--space-lg);
+}
+.form-card input {
+  background: var(--surface);
+  border: 1px solid var(--border-visible);
+  color: var(--text-primary);
+  padding: var(--space-md);
+  border-radius: var(--radius-compact);
+  font: inherit;
+}
+.form-card input:focus {
+  outline: none;
+  border-color: var(--text-display);
+}
+.form-card button {
+  align-self: flex-start;
+  background: var(--text-display);
+  color: var(--black);
+  border: 0;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-compact);
+  font-family: var(--font-mono);
+  font-size: var(--caption);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.form-card button:hover {
+  background: var(--text-primary);
+}
+
+/* Danger zone — collapsed details block for destructive ops. */
+.danger-zone {
+  border-top: 1px solid var(--accent-subtle);
+  padding-top: var(--space-xl);
+  margin-top: var(--space-xl);
+}
+.danger-zone > summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  list-style: none;
+}
+.danger-zone > summary::before {
+  content: "// ";
+  color: var(--text-disabled);
+}
+.danger-zone[open] > summary {
+  margin-bottom: var(--space-md);
+}
+.danger-zone input {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border-visible);
+  color: var(--text-primary);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-compact);
+  font: inherit;
+  margin-bottom: var(--space-sm);
+}
+.danger-zone .danger,
+button.danger {
+  background: var(--accent);
+  color: white;
+  border: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-compact);
+  font-family: var(--font-mono);
+  font-size: var(--caption);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+button.danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
