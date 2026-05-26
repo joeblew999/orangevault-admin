@@ -1,0 +1,28 @@
+# orangevault-admin — secrets + config resolved from the macOS keychain.
+#
+# Write a value with:   fnox set --global -p keychain <KEY>
+#
+# Shared item names ARE the cross-repo contract — renaming a key here
+# without updating every consumer breaks auth silently. Coordinate name
+# changes across repos.
+
+[providers.keychain]
+type = "keychain"
+service = "fnox"
+
+[secrets]
+# Cloudflare deploy credentials (shared across every CF Workers repo).
+CLOUDFLARE_API_TOKEN     = { provider = "keychain", value = "CLOUDFLARE_API_TOKEN" }
+CLOUDFLARE_ACCOUNT_ID    = { provider = "keychain", value = "CLOUDFLARE_ACCOUNT_ID" }
+
+# Production domain for the admin worker.
+ORANGEVAULT_ADMIN_DOMAIN = { provider = "keychain", value = "ORANGEVAULT_ADMIN_DOMAIN" }
+
+# Macaroon root key — generated via `openssl rand -base64 32`. Pushed to
+# the deployed worker via `wrangler secret put MACAROON_ROOT_KEY`. The
+# admin CLI loads it from fnox to verify macaroons issued by the worker.
+ORANGEVAULT_ADMIN_MACAROON_ROOT_KEY = { provider = "keychain", value = "ORANGEVAULT_ADMIN_MACAROON_ROOT_KEY" }
+
+# First admin macaroon — minted once and stored here. CLI sends it as
+# Authorization: Bearer <macaroon-base64> on every request.
+ORANGEVAULT_ADMIN_TOKEN  = { provider = "keychain", value = "ORANGEVAULT_ADMIN_TOKEN" }

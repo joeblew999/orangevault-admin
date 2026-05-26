@@ -1,0 +1,45 @@
+[settings]
+experimental = true
+
+# orangevault-admin — admin worker for orangevault.
+# ConnectRPC + libmacaroon + buffa stack (connyay paradigm).
+#
+# Fresh-machine spin-up:
+#   1. fnox set --global -p keychain CLOUDFLARE_API_TOKEN
+#      fnox set --global -p keychain CLOUDFLARE_ACCOUNT_ID
+#      fnox set --global -p keychain ORANGEVAULT_ADMIN_DOMAIN
+#   2. mise install
+#      rustup target add wasm32-unknown-unknown
+#   3. mise run dev      (local — wrangler dev)
+#      mise run deploy   (production)
+
+[tools]
+node              = "lts"
+"npm:wrangler"    = "latest"
+"github:jdx/fnox" = "1.24"
+
+[tasks."deps:update"]
+description = "Refresh Cargo.lock so wasm-bindgen >= 0.2.121 (required by worker-build). Idempotent."
+run         = "cargo update"
+
+[tasks.dev]
+description = "Run locally via wrangler dev."
+depends     = ["deps:update"]
+run         = "wrangler dev"
+
+[tasks.deploy]
+description = "Build + deploy to Cloudflare Workers. Reads CLOUDFLARE_API_TOKEN from fnox."
+depends     = ["deps:update"]
+shell       = "nu -c"
+run = '''
+$env.CLOUDFLARE_API_TOKEN = (^fnox get CLOUDFLARE_API_TOKEN | str trim)
+^wrangler deploy
+'''
+
+[tasks.tail]
+description = "Tail live Worker logs. Reads CLOUDFLARE_API_TOKEN from fnox."
+shell       = "nu -c"
+run = '''
+$env.CLOUDFLARE_API_TOKEN = (^fnox get CLOUDFLARE_API_TOKEN | str trim)
+^wrangler tail
+'''

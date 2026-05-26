@@ -1,0 +1,45 @@
+[package]
+name = "orangevault-admin"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+worker        = { version = "0.8", features = ["http", "d1"] }
+worker-macros = { version = "0.8", features = ["http"] }
+
+# ConnectRPC + protobuf runtime (generated code targets buffa).
+connectrpc  = { version = "0.4", default-features = false }
+buffa       = { version = "0.5", features = ["json"] }
+buffa-types = { version = "0.5", features = ["json"] }
+
+# Macaroons — for admin tokens (caveat-checked, no DB on the hot path).
+libmacaroon = { version = "0.2", features = ["wasm"], default-features = false }
+
+uuid       = { version = "1", features = ["v4", "serde", "js"] }
+base64     = "0.22"
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+http            = "1"
+http-body       = "1"
+http-body-util  = "0.1"
+bytes           = { version = "1.5", features = ["serde"] }
+
+futures = "0.3"
+tower   = { version = "0.5", features = ["util"] }
+
+# `js` feature wires getrandom to crypto.getRandomValues on wasm32 so any
+# transitive RNG use (uuid v4, macaroon nonces) resolves.
+getrandom = { version = "0.2", features = ["js"] }
+
+[build-dependencies]
+connectrpc-build = { version = "0.4" }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1

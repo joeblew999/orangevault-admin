@@ -1,0 +1,4 @@
+[target.wasm32-unknown-unknown]
+# Keep externref table alive through opt-level=z + lto so wasm-bindgen
+# catch-wrapper generation works under worker-build --panic-unwind.
+rustflags = ["-C", "target-feature=+reference-types"]

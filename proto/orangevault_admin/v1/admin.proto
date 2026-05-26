@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package orangevault_admin.v1;
+
+// Management API for orangevault. Reads orangevault's D1 directly, gated by
+// a macaroon-bearer admin token. NOT exposed to end users — meant for the
+// vault operator running ops via a CLI / TUI / internal dashboard.
+service AdminService {
+  // Liveness probe.
+  rpc Healthz(HealthzRequest) returns (HealthzResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // List users in orangevault's `users` table. Paginated.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Rotate a user's security_stamp, invalidating all their outstanding
+  // access tokens. orangevault checks sstamp on every authenticated
+  // request, so this is the canonical "log this user out everywhere".
+  rpc RotateSecurityStamp(RotateSecurityStampRequest) returns (RotateSecurityStampResponse);
+}
+
+message HealthzRequest {}
+message HealthzResponse {
+  string status = 1;
+  string version = 2;
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  bool email_verified = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}
+
+message ListUsersRequest {
+  optional uint32 limit = 1;   // default 100, max 1000
+  optional string cursor = 2;  // opaque, returned by previous response
+}
+message ListUsersResponse {
+  repeated User users = 1;
+  optional string next_cursor = 2;
+}
+
+message RotateSecurityStampRequest {
+  string user_id = 1;
+}
+message RotateSecurityStampResponse {
+  User user = 1;
+}
