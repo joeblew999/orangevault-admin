@@ -35,6 +35,11 @@ service AdminService {
   rpc ListUserMemberships(ListUserMembershipsRequest) returns (ListUserMembershipsResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+
+  // Hard-delete a user and every row they own (devices, ciphers, folders,
+  // sends, 2FA, memberships, …). Irreversible — orangevault has no soft
+  // delete for users. Use with caution.
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
 }
 
 message HealthzRequest {}
@@ -103,4 +108,12 @@ message ListUserMembershipsRequest {
 }
 message ListUserMembershipsResponse {
   repeated Membership memberships = 1;
+}
+
+message DeleteUserRequest {
+  string user_id = 1;
+}
+message DeleteUserResponse {
+  // Per-table rows removed, for audit.
+  uint32 deleted_rows = 1;
 }

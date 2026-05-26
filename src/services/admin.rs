@@ -9,11 +9,12 @@ use worker::D1Database;
 use worker::send::IntoSendFuture;
 
 use crate::proto::orangevault_admin::v1::{
-    AdminService, GetUserResponse, HealthzResponse, ListOrganizationsResponse,
+    AdminService, DeleteUserResponse, GetUserResponse, HealthzResponse, ListOrganizationsResponse,
     ListUserMembershipsResponse, ListUsersResponse, Membership, Organization,
-    OwnedGetUserRequestView, OwnedHealthzRequestView, OwnedListOrganizationsRequestView,
-    OwnedListUserMembershipsRequestView, OwnedListUsersRequestView,
-    OwnedRotateSecurityStampRequestView, RotateSecurityStampResponse, User,
+    OwnedDeleteUserRequestView, OwnedGetUserRequestView, OwnedHealthzRequestView,
+    OwnedListOrganizationsRequestView, OwnedListUserMembershipsRequestView,
+    OwnedListUsersRequestView, OwnedRotateSecurityStampRequestView, RotateSecurityStampResponse,
+    User,
 };
 
 pub struct AdminServer {
@@ -186,6 +187,79 @@ impl AdminService for AdminServer {
         })
     }
 
+    async fn delete_user(
+        &self,
+        _ctx: RequestContext,
+        request: OwnedDeleteUserRequestView,
+    ) -> ServiceResult<DeleteUserResponse> {
+        let user_id: String = request.user_id.into();
+        if user_id.is_empty() {
+            return Err(ConnectError::invalid_argument("user_id required"));
+        }
+
+        // Verify the user exists first so we 404 cleanly instead of
+        // running 11 no-op deletes.
+        let exists: Option<UuidRow> = self
+            .db
+            .prepare("SELECT uuid FROM users WHERE uuid = ?1")
+            .bind(&[user_id.clone().into()])
+            .map_err(d1_err)?
+            .first(None)
+            .into_send()
+            .await
+            .map_err(d1_err)?;
+        if exists.is_none() {
+            return Err(ConnectError::not_found("user not found"));
+        }
+
+        // orangevault's upstream schema doesn't declare ON DELETE CASCADE,
+        // so cascade by hand. Order matters: leaves first, root last.
+        // Wrapped in a D1 batch so they apply atomically.
+        let stmts = [
+            "DELETE FROM users_collections WHERE user_uuid = ?1",
+            "DELETE FROM favorites WHERE user_uuid = ?1",
+            "DELETE FROM folders_ciphers WHERE cipher_uuid IN (SELECT uuid FROM ciphers WHERE user_uuid = ?1)",
+            "DELETE FROM attachments WHERE cipher_uuid IN (SELECT uuid FROM ciphers WHERE user_uuid = ?1)",
+            "DELETE FROM ciphers WHERE user_uuid = ?1",
+            "DELETE FROM folders WHERE user_uuid = ?1",
+            "DELETE FROM sends WHERE user_uuid = ?1",
+            "DELETE FROM two_factor WHERE user_uuid = ?1",
+            "DELETE FROM devices WHERE user_uuid = ?1",
+            "DELETE FROM memberships WHERE user_uuid = ?1",
+            "DELETE FROM users WHERE uuid = ?1",
+        ];
+
+        let mut prepared = Vec::with_capacity(stmts.len());
+        for sql in stmts {
+            let p = self
+                .db
+                .prepare(sql)
+                .bind(&[user_id.clone().into()])
+                .map_err(d1_err)?;
+            prepared.push(p);
+        }
+
+        let results = self.db.batch(prepared).into_send().await.map_err(d1_err)?;
+        let total: u32 = results
+            .iter()
+            .map(|r| {
+                // worker-rs D1Result exposes meta() with .changes; conservatively
+                // pull what we can without depending on internal shape.
+                r.meta()
+                    .ok()
+                    .flatten()
+                    .and_then(|m| m.changes)
+                    .unwrap_or(0)
+                    .max(0) as u32
+            })
+            .sum();
+
+        Response::ok(DeleteUserResponse {
+            deleted_rows: total,
+            ..Default::default()
+        })
+    }
+
     async fn list_user_memberships(
         &self,
         _ctx: RequestContext,
@@ -227,6 +301,12 @@ impl AdminService for AdminServer {
             ..Default::default()
         })
     }
+}
+
+#[derive(serde::Deserialize)]
+struct UuidRow {
+    #[allow(dead_code)]
+    uuid: String,
 }
 
 #[derive(serde::Deserialize)]
