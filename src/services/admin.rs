@@ -4,14 +4,14 @@
 //! For now the worker is unauthenticated — fine for the scaffold, **must**
 //! be added before exposing externally.
 
-use buffa::view::OwnedView;
-use connectrpc::{ErrorCode, RequestContext, Response, RpcError};
+use connectrpc::{ConnectError, RequestContext, Response, ServiceResult};
 use worker::D1Database;
+use worker::send::IntoSendFuture;
 
 use crate::proto::orangevault_admin::v1::{
-    AdminService, HealthzRequest, HealthzRequestView, HealthzResponse, ListUsersRequest,
-    ListUsersRequestView, ListUsersResponse, RotateSecurityStampRequest,
-    RotateSecurityStampRequestView, RotateSecurityStampResponse, User,
+    AdminService, HealthzResponse, ListUsersResponse, OwnedHealthzRequestView,
+    OwnedListUsersRequestView, OwnedRotateSecurityStampRequestView,
+    RotateSecurityStampResponse, User,
 };
 
 pub struct AdminServer {
@@ -24,26 +24,25 @@ impl AdminServer {
     }
 }
 
-#[async_trait::async_trait(?Send)]
 impl AdminService for AdminServer {
     async fn healthz(
         &self,
         _ctx: RequestContext,
-        _req: OwnedView<HealthzRequestView>,
-    ) -> Result<Response<HealthzResponse>, RpcError> {
-        Ok(Response::new(HealthzResponse {
+        _request: OwnedHealthzRequestView,
+    ) -> ServiceResult<HealthzResponse> {
+        Response::ok(HealthzResponse {
             status: "ok".into(),
             version: env!("CARGO_PKG_VERSION").into(),
-        }))
+            ..Default::default()
+        })
     }
 
     async fn list_users(
         &self,
         _ctx: RequestContext,
-        req: OwnedView<ListUsersRequestView>,
-    ) -> Result<Response<ListUsersResponse>, RpcError> {
-        let req: ListUsersRequest = req.into_owned();
-        let limit = req.limit.unwrap_or(100).clamp(1, 1000) as i64;
+        request: OwnedListUsersRequestView,
+    ) -> ServiceResult<ListUsersResponse> {
+        let limit = request.limit.unwrap_or(100).clamp(1, 1000) as i64;
 
         let stmt = self
             .db
@@ -51,7 +50,13 @@ impl AdminService for AdminServer {
             .bind(&[limit.into()])
             .map_err(d1_err)?;
 
-        let rows: Vec<UserRow> = stmt.all().await.map_err(d1_err)?.results().map_err(d1_err)?;
+        let rows: Vec<UserRow> = stmt
+            .all()
+            .into_send()
+            .await
+            .map_err(d1_err)?
+            .results()
+            .map_err(d1_err)?;
 
         let users = rows
             .into_iter()
@@ -62,23 +67,24 @@ impl AdminService for AdminServer {
                 email_verified: r.email_verified != 0,
                 created_at: r.created_at,
                 updated_at: r.updated_at,
+                ..Default::default()
             })
             .collect();
 
-        Ok(Response::new(ListUsersResponse {
+        Response::ok(ListUsersResponse {
             users,
-            next_cursor: None, // simple impl — no pagination yet
-        }))
+            next_cursor: None,
+            ..Default::default()
+        })
     }
 
     async fn rotate_security_stamp(
         &self,
         _ctx: RequestContext,
-        req: OwnedView<RotateSecurityStampRequestView>,
-    ) -> Result<Response<RotateSecurityStampResponse>, RpcError> {
-        let req: RotateSecurityStampRequest = req.into_owned();
-        if req.user_id.is_empty() {
-            return Err(RpcError::new(ErrorCode::InvalidArgument, "user_id required"));
+        request: OwnedRotateSecurityStampRequestView,
+    ) -> ServiceResult<RotateSecurityStampResponse> {
+        if request.user_id.is_empty() {
+            return Err(ConnectError::invalid_argument("user_id required"));
         }
 
         let new_stamp = uuid::Uuid::new_v4().to_string();
@@ -86,23 +92,24 @@ impl AdminService for AdminServer {
         let stmt = self
             .db
             .prepare("UPDATE users SET security_stamp = ?1, updated_at = datetime('now') WHERE uuid = ?2 RETURNING uuid, email, name, email_verified, created_at, updated_at")
-            .bind(&[new_stamp.clone().into(), req.user_id.clone().into()])
+            .bind(&[new_stamp.into(), request.user_id.into()])
             .map_err(d1_err)?;
 
-        let row: Option<UserRow> = stmt.first(None).await.map_err(d1_err)?;
-        let row = row.ok_or_else(|| RpcError::new(ErrorCode::NotFound, "user not found"))?;
+        let row: Option<UserRow> = stmt.first(None).into_send().await.map_err(d1_err)?;
+        let row = row.ok_or_else(|| ConnectError::not_found("user not found"))?;
 
-        Ok(Response::new(RotateSecurityStampResponse {
-            user: Some(User {
+        Response::ok(RotateSecurityStampResponse {
+            user: buffa::MessageField::some(User {
                 id: row.uuid,
                 email: row.email,
                 name: row.name,
                 email_verified: row.email_verified != 0,
                 created_at: row.created_at,
                 updated_at: row.updated_at,
-            })
-            .into(),
-        }))
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
     }
 }
 
@@ -116,6 +123,6 @@ struct UserRow {
     updated_at: String,
 }
 
-fn d1_err(e: impl std::fmt::Display) -> RpcError {
-    RpcError::new(ErrorCode::Internal, format!("d1: {e}"))
+fn d1_err(e: impl std::fmt::Display) -> ConnectError {
+    ConnectError::internal(format!("d1: {e}"))
 }
