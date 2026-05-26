@@ -157,6 +157,7 @@ function UserDetail({
   const [memberships, setMemberships] = useState<Membership[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -186,6 +187,23 @@ function UserDetail({
       setBusy(false);
     }
   }, [user.id, onChange, onClose]);
+
+  const remove = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await adminClient.deleteUser({ userId: user.id });
+      console.info(`deleted ${user.email}, rows=${res.deletedRows}`);
+      onChange();
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e, "DeleteUser failed"));
+    } finally {
+      setBusy(false);
+    }
+  }, [user.id, user.email, onChange, onClose]);
+
+  const deleteEnabled = !busy && deleteConfirm.trim() === user.email;
 
   return (
     <div className="modal" role="dialog">
@@ -222,13 +240,36 @@ function UserDetail({
         {error && <p className="error">{error}</p>}
 
         <div className="actions">
-          <button type="button" className="danger" disabled={busy} onClick={rotate}>
-            Rotate security stamp (logs them out everywhere)
+          <button type="button" className="ghost" disabled={busy} onClick={rotate}>
+            Rotate security stamp
           </button>
           <button type="button" className="ghost" onClick={onClose}>
             Close
           </button>
         </div>
+
+        <details className="danger-zone">
+          <summary>Danger zone</summary>
+          <p className="muted">
+            Hard-deletes the user and every row they own (devices, ciphers,
+            folders, sends, 2FA, memberships). Irreversible. Type the email
+            to confirm:
+          </p>
+          <input
+            type="text"
+            placeholder={user.email}
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+          />
+          <button
+            type="button"
+            className="danger"
+            disabled={!deleteEnabled}
+            onClick={remove}
+          >
+            Delete user
+          </button>
+        </details>
       </div>
     </div>
   );
