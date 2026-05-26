@@ -16,10 +16,25 @@ service AdminService {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
+  // Get a single user by id.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
   // Rotate a user's security_stamp, invalidating all their outstanding
   // access tokens. orangevault checks sstamp on every authenticated
   // request, so this is the canonical "log this user out everywhere".
   rpc RotateSecurityStamp(RotateSecurityStampRequest) returns (RotateSecurityStampResponse);
+
+  // List every organization on the server.
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // List the organizations a user belongs to, with role + status.
+  rpc ListUserMemberships(ListUserMembershipsRequest) returns (ListUserMembershipsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
 }
 
 message HealthzRequest {}
@@ -51,4 +66,41 @@ message RotateSecurityStampRequest {
 }
 message RotateSecurityStampResponse {
   User user = 1;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+message GetUserResponse {
+  User user = 1;
+}
+
+message Organization {
+  string id = 1;
+  string name = 2;
+  string billing_email = 3;
+  uint32 member_count = 4;
+}
+
+message ListOrganizationsRequest {
+  optional uint32 limit = 1;
+}
+message ListOrganizationsResponse {
+  repeated Organization organizations = 1;
+}
+
+// Role enum matches orangevault's membership.atype: 0=Owner, 1=Admin,
+// 2=User, 3=Manager. Status: 0=Invited, 1=Accepted, 2=Confirmed.
+message Membership {
+  string organization_id = 1;
+  string organization_name = 2;
+  int32 role = 3;
+  int32 status = 4;
+}
+
+message ListUserMembershipsRequest {
+  string user_id = 1;
+}
+message ListUserMembershipsResponse {
+  repeated Membership memberships = 1;
 }
