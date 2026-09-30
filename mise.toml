@@ -16,8 +16,8 @@ experimental = true
 
 [tools]
 node              = "24.19.0"
-"npm:wrangler"    = "latest"
-"github:jdx/fnox" = "1.24"
+"npm:wrangler"    = "4.143.0"
+"github:jdx/fnox" = "1.24.1"
 
 [tasks."deps:update"]
 description = "Refresh Cargo.lock so wasm-bindgen >= 0.2.121 (required by worker-build). Idempotent."
