@@ -15,7 +15,7 @@ experimental = true
 #      mise run deploy   (production)
 
 [tools]
-node              = "lts"
+node              = "24.19.0"
 "npm:wrangler"    = "latest"
 "github:jdx/fnox" = "1.24"
 
