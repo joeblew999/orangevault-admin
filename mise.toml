@@ -1,4 +1,5 @@
 [settings]
+idiomatic_version_file_enable_tools = ["rust"]
 experimental = true
 
 # orangevault-admin — admin worker for orangevault.
