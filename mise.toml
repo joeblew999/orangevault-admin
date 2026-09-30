@@ -15,6 +15,7 @@ experimental = true
 #      mise run deploy   (production)
 
 [tools]
+"aqua:protocolbuffers/protobuf/protoc" = "35.0"
 node              = "24.19.0"
 "npm:wrangler"    = "4.143.0"
 "github:jdx/fnox" = "1.24.1"
