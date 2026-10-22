@@ -4,17 +4,15 @@
 //! For now the worker is unauthenticated — fine for the scaffold, **must**
 //! be added before exposing externally.
 
-use connectrpc::{ConnectError, RequestContext, Response, ServiceResult};
+use connectrpc::{ConnectError, RequestContext, Response, ServiceRequest, ServiceResult};
 use worker::D1Database;
 use worker::send::IntoSendFuture;
 
 use crate::proto::orangevault_admin::v1::{
-    AdminService, DeleteUserResponse, GetUserResponse, HealthzResponse, ListOrganizationsResponse,
-    ListUserMembershipsResponse, ListUsersResponse, Membership, Organization,
-    OwnedDeleteUserRequestView, OwnedGetUserRequestView, OwnedHealthzRequestView,
-    OwnedListOrganizationsRequestView, OwnedListUserMembershipsRequestView,
-    OwnedListUsersRequestView, OwnedRotateSecurityStampRequestView, RotateSecurityStampResponse,
-    User,
+    AdminService, DeleteUserRequest, DeleteUserResponse, GetUserRequest, GetUserResponse,
+    HealthzRequest, HealthzResponse, ListOrganizationsRequest, ListOrganizationsResponse,
+    ListUserMembershipsRequest, ListUserMembershipsResponse, ListUsersRequest, ListUsersResponse,
+    Membership, Organization, RotateSecurityStampRequest, RotateSecurityStampResponse, User,
 };
 
 pub struct AdminServer {
@@ -31,7 +29,7 @@ impl AdminService for AdminServer {
     async fn healthz(
         &self,
         _ctx: RequestContext,
-        _request: OwnedHealthzRequestView,
+        _request: ServiceRequest<'_, HealthzRequest>,
     ) -> ServiceResult<HealthzResponse> {
         Response::ok(HealthzResponse {
             status: "ok".into(),
@@ -43,7 +41,7 @@ impl AdminService for AdminServer {
     async fn list_users(
         &self,
         _ctx: RequestContext,
-        request: OwnedListUsersRequestView,
+        request: ServiceRequest<'_, ListUsersRequest>,
     ) -> ServiceResult<ListUsersResponse> {
         // D1 rejects i64 — bind LIMIT as f64.
         let limit = request.limit.unwrap_or(100).clamp(1, 1000) as f64;
@@ -85,7 +83,7 @@ impl AdminService for AdminServer {
     async fn get_user(
         &self,
         _ctx: RequestContext,
-        request: OwnedGetUserRequestView,
+        request: ServiceRequest<'_, GetUserRequest>,
     ) -> ServiceResult<GetUserResponse> {
         if request.user_id.is_empty() {
             return Err(ConnectError::invalid_argument("user_id required"));
@@ -114,7 +112,7 @@ impl AdminService for AdminServer {
     async fn rotate_security_stamp(
         &self,
         _ctx: RequestContext,
-        request: OwnedRotateSecurityStampRequestView,
+        request: ServiceRequest<'_, RotateSecurityStampRequest>,
     ) -> ServiceResult<RotateSecurityStampResponse> {
         if request.user_id.is_empty() {
             return Err(ConnectError::invalid_argument("user_id required"));
@@ -148,7 +146,7 @@ impl AdminService for AdminServer {
     async fn list_organizations(
         &self,
         _ctx: RequestContext,
-        request: OwnedListOrganizationsRequestView,
+        request: ServiceRequest<'_, ListOrganizationsRequest>,
     ) -> ServiceResult<ListOrganizationsResponse> {
         let limit = request.limit.unwrap_or(100).clamp(1, 1000) as f64;
         let stmt = self
@@ -190,7 +188,7 @@ impl AdminService for AdminServer {
     async fn delete_user(
         &self,
         _ctx: RequestContext,
-        request: OwnedDeleteUserRequestView,
+        request: ServiceRequest<'_, DeleteUserRequest>,
     ) -> ServiceResult<DeleteUserResponse> {
         let user_id: String = request.user_id.into();
         if user_id.is_empty() {
@@ -245,12 +243,7 @@ impl AdminService for AdminServer {
             .map(|r| {
                 // worker-rs D1Result exposes meta() with .changes; conservatively
                 // pull what we can without depending on internal shape.
-                r.meta()
-                    .ok()
-                    .flatten()
-                    .and_then(|m| m.changes)
-                    .unwrap_or(0)
-                    .max(0) as u32
+                r.meta().ok().flatten().and_then(|m| m.changes).unwrap_or(0) as u32
             })
             .sum();
 
@@ -263,7 +256,7 @@ impl AdminService for AdminServer {
     async fn list_user_memberships(
         &self,
         _ctx: RequestContext,
-        request: OwnedListUserMembershipsRequestView,
+        request: ServiceRequest<'_, ListUserMembershipsRequest>,
     ) -> ServiceResult<ListUserMembershipsResponse> {
         if request.user_id.is_empty() {
             return Err(ConnectError::invalid_argument("user_id required"));
