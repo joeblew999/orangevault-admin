@@ -2,19 +2,21 @@
 name = "orangevault-admin"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.91"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-worker        = { version = "0.8", features = ["http", "d1"] }
-worker-macros = { version = "0.8", features = ["http"] }
+worker        = { version = "0.8.7", features = ["http", "d1"] }
+worker-macros = { version = "0.8.7", features = ["http"] }
 
 # ConnectRPC + protobuf runtime (generated code targets buffa).
-connectrpc  = { version = "0.4", default-features = false }
-buffa       = { version = "0.5", features = ["json"] }
-buffa-types = { version = "0.5", features = ["json"] }
+# JSON is opt-in since connectrpc 0.8; connect-web speaks JSON, so without
+# the `json` feature every request gets HTTP 415.
+connectrpc  = { version = "0.9.1", default-features = false, features = ["json"] }
+buffa       = { version = "0.9.2", features = ["json"] }
+buffa-types = { version = "0.9.2", features = ["json"] }
 
 # Macaroons — for admin tokens (caveat-checked, no DB on the hot path).
 libmacaroon = { version = "0.2", features = ["wasm"], default-features = false }
@@ -37,7 +39,7 @@ tower   = { version = "0.5", features = ["util"] }
 getrandom = { version = "0.2", features = ["js"] }
 
 [build-dependencies]
-connectrpc-build = { version = "0.4" }
+connectrpc-build = { version = "0.9.0" }
 
 [profile.release]
 opt-level = "z"

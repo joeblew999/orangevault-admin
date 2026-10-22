@@ -21,7 +21,7 @@ node              = "24.19.0"
 "github:jdx/fnox" = "1.24.1"
 
 [tasks."deps:update"]
-description = "Refresh Cargo.lock so wasm-bindgen >= 0.2.121 (required by worker-build). Idempotent."
+description = "Refresh Cargo.lock so wasm-bindgen >= 0.2.125 (required by worker-build 0.8.7). Idempotent."
 run         = "cargo update"
 
 [tasks.dev]
